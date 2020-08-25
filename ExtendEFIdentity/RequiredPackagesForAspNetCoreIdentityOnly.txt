@@ -1,0 +1,6 @@
+﻿Basic Packages for ASP.NET Core Identity
+Microsoft.Extensions.Identity.Core
+Microsoft.AspNetCore.Identity
+Microsoft.Extensions.Identity.Stores
+Microsoft.AspNetcore.Identity.EntityFrameworkCore
+Microsoft.AspNetCore.Authentication.Cookies

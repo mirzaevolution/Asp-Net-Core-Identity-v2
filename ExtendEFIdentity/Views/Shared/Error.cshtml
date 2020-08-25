@@ -1,0 +1,14 @@
+﻿@model List<string>
+@{
+	ViewBag["Title"] = "Error";
+}
+<div class="p-2 mt-2">
+	<h3 class="text-danger">An error has occured</h3>
+	<p>Please review these following traces: </p>
+	<ul>
+		@foreach (string error in Model)
+		{
+			<li>@error</li>
+		}
+	</ul>
+</div>
