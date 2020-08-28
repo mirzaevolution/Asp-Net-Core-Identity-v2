@@ -24,7 +24,7 @@ namespace ExtendEFIdentity.Controllers
         {
             return View();
         }
-
+        [Authorize(Roles = "ADMIN")]
         public IActionResult Privacy()
         {
             return View();

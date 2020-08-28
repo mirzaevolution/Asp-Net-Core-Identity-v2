@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExtendEFIdentity
 {
-    public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<string>, string>
+    public class AppDbContext : IdentityDbContext<AppUser>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
@@ -22,6 +22,7 @@ namespace ExtendEFIdentity
                 o.Property(c => c.FullName)
                     .HasMaxLength(255)
                     .IsUnicode(false);
+
                 o.HasIndex(c => c.FullName)
                     .HasName("IDX_Users_FullName")
                     .IsUnique(false);

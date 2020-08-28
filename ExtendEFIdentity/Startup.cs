@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.SqlServer;
 using ExtendEFIdentity.Entities;
 using Microsoft.AspNetCore.Http;
+using System.Diagnostics;
 
 namespace ExtendEFIdentity
 {
@@ -41,7 +42,7 @@ namespace ExtendEFIdentity
                     sqlOptions.MigrationsAssembly(assemblyName);
                 });
             });
-            services.AddIdentity<AppUser, IdentityRole<string>>(options =>
+            services.AddIdentity<AppUser, IdentityRole>(options =>
             {
 
                 //for demo purpose, i deactivate these password options
@@ -62,19 +63,21 @@ namespace ExtendEFIdentity
 
 
             })
+                .AddDefaultTokenProviders()
                 .AddEntityFrameworkStores<AppDbContext>(); //this is required!
             services.ConfigureApplicationCookie(options =>
             {
                 options.LoginPath = new PathString("/auth/login");
                 options.LogoutPath = new PathString("/auth/logout");
-                options.AccessDeniedPath = new PathString("/auth/denied");
+                options.AccessDeniedPath = new PathString("/auth/accessdenied");
             });
             services.AddControllersWithViews();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
         {
+            InitAdminUserAndRole(userManager, roleManager);
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -98,6 +101,69 @@ namespace ExtendEFIdentity
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
             });
+        }
+
+        private void InitAdminUserAndRole(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
+        {
+            bool next = true;
+            string adminRoleName = "ADMIN";
+            string userName = "admin@demo.com";
+            string fullName = "Administrator";
+            string password = "future";
+            try
+            {
+                IdentityRole role = new IdentityRole(adminRoleName);
+                if (!roleManager.RoleExistsAsync(adminRoleName).Result)
+                {
+                    var createRoleResult = roleManager.CreateAsync(role).GetAwaiter().GetResult();
+                    if (!createRoleResult.Succeeded)
+                    {
+                        next = false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(ex);
+                next = false;
+            }
+            if (next)
+            {
+                try
+                {
+                    if (userManager.FindByNameAsync(userName).Result == null)
+                    {
+                        var user = new AppUser
+                        {
+                            UserName = userName,
+                            Email = userName,
+                            EmailConfirmed = true,
+                            FullName = fullName
+                        };
+                        var createAdminResult = userManager.CreateAsync(user, password).GetAwaiter().GetResult();
+                        if (!createAdminResult.Succeeded)
+                        {
+                            next = false;
+                        }
+                        else
+                        {
+                            var addToRoleResult = userManager.AddToRoleAsync(user, adminRoleName).GetAwaiter().GetResult();
+                            if (!addToRoleResult.Succeeded)
+                            {
+                                next = false;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine(ex);
+                    next = false;
+                }
+            }
+
+
+            //consume your NEXT variable....
         }
     }
 }
