@@ -34,7 +34,7 @@ namespace ExtendEFIdentity
         public void ConfigureServices(IServiceCollection services)
         {
             string assemblyName = typeof(Startup).Assembly.GetName().Name;
-
+            services.AddLogging();
             services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseSqlServer(Configuration.GetConnectionString("SqlServer"), sqlOptions =>
@@ -65,6 +65,15 @@ namespace ExtendEFIdentity
             })
                 .AddDefaultTokenProviders()
                 .AddEntityFrameworkStores<AppDbContext>(); //this is required!
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("ReaderPolicy", o =>
+                {
+                    o.RequireAuthenticatedUser();
+                    o.RequireClaim("type", "READER");
+                });
+            });
             services.ConfigureApplicationCookie(options =>
             {
                 options.LoginPath = new PathString("/auth/login");

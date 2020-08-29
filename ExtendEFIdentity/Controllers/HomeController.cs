@@ -19,14 +19,22 @@ namespace ExtendEFIdentity.Controllers
         {
             _logger = logger;
         }
-
         public IActionResult Index()
         {
+            _logger.LogInformation(1000, $">> Accessing page - {nameof(Index)}");
             return View();
         }
         [Authorize(Roles = "ADMIN")]
         public IActionResult Privacy()
         {
+            _logger.LogInformation(1000, $">> Accessing page - {nameof(Privacy)}");
+            return View();
+        }
+
+        [Authorize("ReaderPolicy")]
+        public IActionResult Reader()
+        {
+            _logger.LogInformation(1000, $">> Accessing page - {nameof(Reader)}");
             return View();
         }
     }

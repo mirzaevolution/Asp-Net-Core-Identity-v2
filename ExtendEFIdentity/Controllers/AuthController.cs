@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using ExtendEFIdentity.Entities;
 using Microsoft.AspNetCore.Authorization;
 using System.IO;
+using System.Security.Claims;
 
 namespace ExtendEFIdentity.Controllers
 {
@@ -18,6 +19,7 @@ namespace ExtendEFIdentity.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
+        
 
         public AuthController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager)
         {
@@ -38,6 +40,7 @@ namespace ExtendEFIdentity.Controllers
             {
                 try
                 {
+                    
                     AppUser appUser = new AppUser
                     {
                         FullName = model.FullName,
@@ -47,6 +50,17 @@ namespace ExtendEFIdentity.Controllers
                     var createResult = await _userManager.CreateAsync(appUser, model.Password);
                     if (createResult.Succeeded)
                     {
+                        IdentityResult addClaimResult;
+                        //assign reader type claim
+                        if (appUser.Email.EndsWith("reader.com", StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            addClaimResult = await _userManager.AddClaimAsync(appUser, new Claim("type", "READER"));
+                        }
+                        //assign general type claim
+                        else
+                        {
+                            addClaimResult = await _userManager.AddClaimAsync(appUser, new Claim("type", "GENERAL"));
+                        }
 
                         string confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(appUser);
                         string confirmEmailUrl = Url.Action(nameof(ConfirmEmail), "Auth", new { id = appUser.Id, token = confirmationToken }, Request.Scheme);
