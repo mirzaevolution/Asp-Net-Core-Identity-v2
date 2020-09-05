@@ -1,0 +1,33 @@
+﻿@model ProfileSettingsViewModel
+@{
+	ViewData["Title"] = "Profile Settings";
+}
+
+<h3 class="text-primary">Profile Settings</h3>
+
+<div class="card m-3">
+	<div class="card-header"><h4 class="card-title">Two Factor Setting</h4></div>
+	<div class="card-body">
+		@if (Model.TwoFactorEnabled)
+		{
+			<form asp-controller="Auth" asp-action="ToggleMFA" method="post">
+				@Html.AntiForgeryToken()
+				<div class="form-group">
+					<label for="ButtonActiveInactive">Deactivate Two Factor Login</label> <br />
+					<button name="Active" id="ButtonActiveInactive" type="submit" value="false" class="btn btn-danger btn-sm">Deactivate</button>
+				</div>
+			</form>
+		}
+		else
+		{
+			<form asp-controller="Auth" asp-action="ToggleMFA" method="post">
+				@Html.AntiForgeryToken()
+				<div class="form-group">
+					<label for="ButtonActiveInactive">Activate Two Factor Login</label><br />
+					<button name="Active" id="ButtonActiveInactive" type="submit" value="true" class="btn btn-primary btn-sm">Activate</button>
+				</div>
+			</form>
+		}
+	</div>
+</div>
+

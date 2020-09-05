@@ -19,7 +19,7 @@ namespace ExtendEFIdentity.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
-        
+
 
         public AuthController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager)
         {
@@ -40,7 +40,7 @@ namespace ExtendEFIdentity.Controllers
             {
                 try
                 {
-                    
+
                     AppUser appUser = new AppUser
                     {
                         FullName = model.FullName,
@@ -101,34 +101,111 @@ namespace ExtendEFIdentity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
-            if (ModelState.IsValid)
+
+            try
             {
-                var user = await _userManager.FindByNameAsync(model.Email);
-                if (user != null)
+                if (ModelState.IsValid)
                 {
-                    if (!user.EmailConfirmed)
+                    var user = await _userManager.FindByNameAsync(model.Email);
+                    if (user != null)
                     {
-                        return View("Error", new List<string>
+                        if (!user.EmailConfirmed)
                         {
-                            "Your account must be activated first!"
-                        });
+                            return View("Error", new List<string>
+                            {
+                                "Your account must be activated first!"
+                            });
+                        }
+                        if (!user.TwoFactorEnabled)
+                        {
+                            return await CommonLogin(user, model.Password);
+                        }
+                        else
+                        {
+                            return await TwoFactorLogin(user);
+                        }
                     }
-
-                    var signInResult = await _signInManager.PasswordSignInAsync(user, model.Password, false, true);
-                    if (signInResult.Succeeded)
-                    {
-                        return RedirectToAction("Index", "Home");
-                    }
-                    else if (signInResult.IsLockedOut)
-                    {
-                        await HttpContext.SignOutAsync();
-
-                        return RedirectToAction("Blocked");
-                    }
+                    ModelState.AddModelError("", "Invalid username or password");
                 }
-                ModelState.AddModelError("", "Invalid username or password");
+            }
+            catch (Exception ex)
+            {
+                List<string> errors = new List<string>();
+                Exception current = ex;
+                while (current != null)
+                {
+                    errors.Add(current.Message);
+                    current = current.InnerException;
+                }
+                return View("Error", errors);
             }
             return View(model);
+        }
+
+        private async Task<IActionResult> CommonLogin(AppUser user, string password)
+        {
+            var signInResult = await _signInManager.PasswordSignInAsync(user, password, false, true);
+            if (signInResult.Succeeded)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+            else if (signInResult.IsLockedOut)
+            {
+                await HttpContext.SignOutAsync();
+
+                return RedirectToAction("Blocked");
+            }
+            return View("Error", new List<string>
+            {
+                "An error occured during login phase"
+            });
+        }
+        private async Task<IActionResult> TwoFactorLogin(AppUser user)
+        {
+            var tokenProvider = await _userManager.GetValidTwoFactorProvidersAsync(user);
+            string provider = tokenProvider.FirstOrDefault(c => c.ToLower().Contains("email"));
+            if (!string.IsNullOrEmpty(provider))
+            {
+
+                string token = await _userManager.GenerateTwoFactorTokenAsync(user, provider);
+                //you can send the token to email here
+                System.IO.File.WriteAllText("TwoFactorToken.txt", $"User Id: {user.Id}\r\nProvider: {provider}\r\nToken: {token}\r\n");
+
+                return View(nameof(VerifyTokenTwoFactorToken), new TwoFactorTokenViewModel
+                {
+                    UserId = user.Id,
+                    Provider = provider
+                });
+
+            }
+            return View("Error", new List<string>
+            {
+                "No valid two factor token provider exists"
+            });
+        }
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> VerifyTokenTwoFactorToken(TwoFactorTokenViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _userManager.FindByIdAsync(model.UserId);
+                if (user != null)
+                {
+                    if (await _userManager.VerifyTwoFactorTokenAsync(user, model.Provider, model.Token))
+                    {
+                        await _signInManager.SignInAsync(user, true, IdentityConstants.ApplicationScheme);
+                        return RedirectToAction("Index", "Home");
+                    }
+                }
+                return View("Error", new List<string>
+                {
+                    "User not found"
+                });
+            }
+            return View("Error", new List<string>
+            {
+                "Invalid payload data"
+            });
         }
 
         [Authorize]
@@ -184,6 +261,47 @@ namespace ExtendEFIdentity.Controllers
             return View((object)message);
         }
 
+        [Authorize]
+        public async Task<IActionResult> Settings()
+        {
+            try
+            {
+                var user = await _userManager.FindByNameAsync(User.Identity.Name);
+                return View(new ProfileSettingsViewModel
+                {
+                    TwoFactorEnabled = user.TwoFactorEnabled
+                });
+            }
+            catch (Exception ex)
+            {
+                List<string> errors = new List<string>();
+                Exception current = ex;
+                while (current != null)
+                {
+                    errors.Add(current.Message);
+                    current = current.InnerException;
+                }
+                return View("Error", errors);
+            }
+        }
+
+        [Authorize, HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleMFA(ToggleMFAViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _userManager.FindByNameAsync(User.Identity.Name);
+                user.TwoFactorEnabled = model.Active;
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (updateResult.Succeeded)
+                {
+                    return RedirectToAction(nameof(Settings), "Auth");
+                }
+                return View("Error", updateResult.Errors.Select(c => c.Description).ToList());
+            }
+            return RedirectToAction(nameof(Settings), "Auth");
+
+        }
 
         public IActionResult AccessDenied()
         {
