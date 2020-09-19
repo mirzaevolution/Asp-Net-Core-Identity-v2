@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace ExtendEFIdentity.Models
 {
@@ -8,5 +9,7 @@ namespace ExtendEFIdentity.Models
         public string Email { get; set; }
         [Display(Name = "Password"), Required, DataType(DataType.Password)]
         public string Password { get; set; }
+
+        public List<string> ExternalLoginProviders { get; set; } = new List<string>();
     }
 }

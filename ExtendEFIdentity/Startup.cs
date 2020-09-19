@@ -80,7 +80,18 @@ namespace ExtendEFIdentity
                 options.LogoutPath = new PathString("/auth/logout");
                 options.AccessDeniedPath = new PathString("/auth/accessdenied");
             });
-            services.AddControllersWithViews();
+
+            services.AddAuthentication()
+                .AddGoogle(AppConstants.GoogleAuthenticationScheme, options =>
+                {
+                    options.ClientId = Configuration["GoogleCredentials:ClientId"];
+                    options.ClientSecret = Configuration["GoogleCredentials:ClientSecret"];
+                    options.SaveTokens = true;
+                    options.SignInScheme = IdentityConstants.ExternalScheme;
+                });
+
+            services.AddControllersWithViews()
+                .AddRazorRuntimeCompilation();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -90,6 +101,7 @@ namespace ExtendEFIdentity
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseBrowserLink();
             }
             else
             {

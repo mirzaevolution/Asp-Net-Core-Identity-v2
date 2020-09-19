@@ -8,5 +8,6 @@ namespace ExtendEFIdentity.Models
     public class ProfileSettingsViewModel
     {
         public bool TwoFactorEnabled { get; set; }
+        public bool AuthenticatorEnabled { get; set; }
     }
 }

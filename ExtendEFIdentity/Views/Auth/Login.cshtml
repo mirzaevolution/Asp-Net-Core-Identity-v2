@@ -7,7 +7,7 @@
 <h3 class="text-primary">Login</h3>
 <hr />
 <div class="row">
-	<div class="col-md-4">
+	<div class="col-md-4 mt-2">
 		<form asp-action="Login">
 			@Html.AntiForgeryToken()
 			<div asp-validation-summary="ModelOnly" class="text-danger"></div>
@@ -24,9 +24,26 @@
 			<div class="form-group">
 				<input type="submit" value="Login" class="btn btn-primary" />
 			</div>
+
 		</form>
 	</div>
+	<div class="col-md mt-2 mb-2">
+		@if (Model.ExternalLoginProviders.Any())
+		{
+			<p class="lead text-primary">External Login Provider(s)</p>
+			<form asp-action="ExternalLogin" asp-controller="Auth"
+				  method="post">
+				@Html.AntiForgeryToken()
+				@foreach (string providerName in Model.ExternalLoginProviders)
+				{
+					<button type="submit" name="Provider" value="@providerName" class="btn btn-dark">@providerName</button>
+				}
+			</form>
+
+		}
+	</div>
 </div>
+
 <div>
 	<p>Don't have any account yet? You can <a asp-controller="Auth" asp-action="Register">Register here!</a></p>
 </div>

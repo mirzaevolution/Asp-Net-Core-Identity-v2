@@ -6,7 +6,7 @@
 <h3 class="text-primary">Profile Settings</h3>
 
 <div class="card m-3">
-	<div class="card-header"><h4 class="card-title">Two Factor Setting</h4></div>
+	<div class="card-header"><h4 class="card-title">Two Factor Settings</h4></div>
 	<div class="card-body">
 		@if (Model.TwoFactorEnabled)
 		{
@@ -17,6 +17,65 @@
 					<button name="Active" id="ButtonActiveInactive" type="submit" value="false" class="btn btn-danger btn-sm">Deactivate</button>
 				</div>
 			</form>
+
+			<br />
+			<div>
+				<p>Activate/Deactivate Authenticator Key for Mobile Phone</p>
+
+				@if (Model.AuthenticatorEnabled)
+				{
+					<form method="post" asp-controller="Auth" asp-action="DeactivateAuthenticator">
+						@Html.AntiForgeryToken()
+						<button type="submit" class="btn btn-danger">Deactivate</button>
+					</form>
+
+				}
+				else
+				{
+					<button type="button" id="ButtonShowAuthenticatorModal" class="btn btn-primary">Activate</button>
+
+				}
+
+
+				<div id="ModalAuthenticator" class="modal">
+					<div class="modal-dialog modal-dialog-scrollable">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h4 class="modal-title">Two Factor Authenticator Settings</h4>
+								<a class="close" data-dismiss="modal">&times;</a>
+							</div>
+							<div class="modal-body">
+								<div>
+									<div class="form-group mb-3">
+										<div id="QrCodeBlock"></div>
+									</div>
+									<div class="form-group">
+										<label>Authenticator Key</label>
+										<input type="text" class="form-control" readonly id="AuthenticatorKey" />
+									</div>
+
+									<div class="form-group">
+										<label>Token</label>
+										<input type="text" class="form-control" id="AuthenticatorToken" placeholder="Enter your token" />
+									</div>
+									<div class="form-group">
+										<button type="button" id="ButtonVerifyAuthenticator" class="btn btn-primary">Verify</button>
+									</div>
+									<div id="ProgressBarBlock" class="form-group" style="display:none">
+										<div class="progress">
+											<div class="progress-bar progress-bar-animated progress-bar-striped" style="width:100%"></div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="modal-footer">
+								<button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+			</div>
 		}
 		else
 		{
@@ -31,3 +90,77 @@
 	</div>
 </div>
 
+@section Scripts{
+	<script asp-append-version="true">
+		$(document).ready(function () {
+			$("#ButtonShowAuthenticatorModal").click(function () {
+
+				$("#ModalAuthenticator").modal("show");
+				showHideProgressBar(true);
+				$.ajax({
+					url: "/Auth/RegisterAuthenticatorKey",
+					success: function (data) {
+
+						showHideProgressBar(false);
+
+						if (data.alreadyActivated) {
+							$("#ModalAuthenticator").modal("hide");
+							alert("Re-activation Succeeded. Authenticator has been verified before now it's been activated again");
+							window.location.reload();
+						}
+						else {
+							$("#AuthenticatorKey").val(data.authenticatorKey);
+							new QRCode(document.getElementById("QrCodeBlock"), data.authenticatorKey);
+						}
+					},
+					error: function () {
+						alert("An error occured during data loading");
+					}
+				})
+			});
+
+			$("#ButtonVerifyAuthenticator").click(function () {
+				var authenticatorToken = $("#AuthenticatorToken").val();
+				if (authenticatorToken == null || AuthenticatorToken == "") {
+					alert("Authenticator token cannot be empty");
+					return;
+				} else {
+					showHideProgressBar(true);
+					$.ajax({
+						url: "/Auth/RegisterAuthenticatorKey",
+						method: "POST",
+						data: {
+							authenticatorKey: $("#AuthenticatorKey").val(),
+							token: authenticatorToken
+						},
+						success: function (data) {
+							showHideProgressBar(false);
+							if (data.success) {
+								window.location.reload();
+							} else {
+								alert(data.error);
+							}
+						},
+						error: function () {
+							alert("An error has occured while verifying data");
+						}
+					})
+				}
+			});
+
+
+		});
+		function showHideProgressBar(state) {
+			if (state === true) {
+				$("#ProgressBarBlock").show();
+				$("#ButtonVerifyAuthenticator").prop("disabled", true);
+				$("#AuthenticatorToken").prop("readonly", true);
+			} else {
+				$("#ProgressBarBlock").hide();
+				$("#ButtonVerifyAuthenticator").prop("disabled", false);
+				$("#AuthenticatorToken").prop("readonly", false);
+			}
+		}
+	</script>
+
+}
